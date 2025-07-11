@@ -1,0 +1,153 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>sofcom.ejemplos</groupId>
+  <artifactId>HelloGrpc</artifactId>
+  <version>1.0.0</version>
+  
+  <properties>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <maven.compiler.source>17</maven.compiler.source>
+    <maven.compiler.target>17</maven.compiler.target>
+    <grpc.version>1.73.0</grpc.version>
+    <protobuf.version>3.25.5</protobuf.version>
+    <protobuf.plugin.version>0.6.1</protobuf.plugin.version>
+  </properties>
+
+  <dependencies>
+    <!-- grpc-netty-shaded:
+       - Transporte de red: Implementa la comunicación HTTP/2 usando Netty
+       - Shaded": Incluye todas las dependencias de Netty empaquetadas para 
+                  evitar conflictos
+       - Scope Runtime: Solo necesario en tiempo de ejecución
+    -->
+    <dependency>
+      <groupId>io.grpc</groupId>
+      <artifactId>grpc-netty-shaded</artifactId>
+      <version>${grpc.version}</version>
+      <scope>runtime</scope>
+    </dependency>
+
+    <!-- grpc-protobuf:
+       - Serialización: Integra Protocol Buffers con gRPC
+       - Marshalling/Unmarshalling: Convierte objetos Java ↔ bytes para transmisión
+       - Definición de mensajes: Usa los archivos .proto para definir la estructura
+    -->
+    <dependency>
+      <groupId>io.grpc</groupId>
+      <artifactId>grpc-protobuf</artifactId>
+      <version>${grpc.version}</version>
+    </dependency>
+
+    <!-- grpc-stub: 
+      - Cliente y servidor stubs: Genera código para clientes y servidores
+      - Abstracciones: Proporciona interfaces fáciles de usar
+      - Tipos de comunicación: Unary, streaming, bidireccional
+    -->
+    <dependency>
+      <groupId>io.grpc</groupId>
+      <artifactId>grpc-stub</artifactId>
+      <version>${grpc.version}</version>
+    </dependency>
+
+    <!-- Necesario para Java 9+ 
+         annotations-api es necesario para que el proyecto Java 17 pueda 
+         usar las anotaciones estándar que antes venían incluidas en el JDK, 
+         especialmente importante para el código generado por gRPC/protobuf.
+    -->
+    <dependency>
+      <groupId>org.apache.tomcat</groupId>
+      <artifactId>annotations-api</artifactId>
+      <version>6.0.53</version>
+      <scope>provided</scope>
+    </dependency>
+
+    
+  </dependencies>
+
+  <build>
+  
+    <extensions>
+      <!-- os-maven-plugin: esta extensión detecta automáticamente las 
+           características del sistema operativo y arquitectura donde 
+           se está ejecutando Maven, y expone esta información como 
+           propiedades que pueden ser utilizadas en el POM.
+           Propiedades que proporciona:
+             - ${os.detected.name} - Nombre del SO (linux, windows, osx)
+             - ${os.detected.arch} - Arquitectura (x86_32, x86_64, aarch_64)
+             - ${os.detected.classifier} - Combinación de ambos (ej: linux-x86_64, 
+                                           windows-x86_64)
+           Se utiliza en el protobuf-maven-plugin para descargar la versión correcta 
+           de protoc
+      -->
+      <extension>
+        <groupId>kr.motd.maven</groupId>
+        <artifactId>os-maven-plugin</artifactId>
+        <version>1.7.1</version>
+      </extension>
+    </extensions>
+  
+    <plugins>
+      <!-- os-maven-plugin como plugin adicional para asegurar compatibilidad con IDEs -->
+      <plugin>
+        <groupId>kr.motd.maven</groupId>
+        <artifactId>os-maven-plugin</artifactId>
+        <version>1.7.1</version>
+        <executions>
+          <execution>
+            <phase>initialize</phase>
+            <goals>
+              <goal>detect</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+
+      <!-- El protobuf-maven-plugin es el plugin más crítico en el proyecto gRPC. 
+           Su función principal es la generación automática de código Java.
+           Este plugin **convierte archivos .proto en clases Java durante 
+           la compilación, automatizando completamente el proceso de 
+           generación de código.
+      -->
+      <plugin>
+        <groupId>org.xolstice.maven.plugins</groupId>
+        <artifactId>protobuf-maven-plugin</artifactId>
+        <version>${protobuf.plugin.version}</version>
+        <configuration>
+          <protocArtifact>com.google.protobuf:protoc:${protobuf.version}:exe:${os.detected.classifier}</protocArtifact>
+          <pluginId>grpc-java</pluginId>
+          <pluginArtifact>io.grpc:protoc-gen-grpc-java:${grpc.version}:exe:${os.detected.classifier}</pluginArtifact>
+        </configuration>
+        <executions>
+          <execution>
+            <goals>
+              <goal>compile</goal>
+              <goal>compile-custom</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+
+      <!-- maven-shade-plugin: empaqueta la aplicación junto con todas sus 
+           dependencias en un solo archivo JAR ejecutable. 
+      -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-shade-plugin</artifactId>
+        <version>3.6.0</version>
+        <configuration>
+          <transformers>
+            <transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"></transformer>
+          </transformers>
+        </configuration>
+        <executions>
+          <execution>
+            <phase>package</phase>
+            <goals>
+              <goal>shade</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+  </build>
+</project>

@@ -1,0 +1,14 @@
+syntax = "proto3";
+
+option java_package = "sofcom.ejemplos";
+option java_multiple_files = true;
+
+service ServicioSaludo {
+   rpc saludo (ClientInput) returns (ServerOutput) {}
+}
+message ClientInput {
+   string name = 1;
+}
+message ServerOutput {
+   string message = 1;
+}
